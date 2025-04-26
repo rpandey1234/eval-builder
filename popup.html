@@ -29,26 +29,50 @@
     button:disabled {
       opacity: 1;
     }
-    #spreadsheetList {
-      margin-top: 10px;
-      max-height: 200px;
-      overflow-y: auto;
+    .spreadsheet-selector {
+      margin-top: 15px;
+      display: none;
     }
-    .spreadsheet-item {
+    .spreadsheet-selector.visible {
+      display: block;
+    }
+    select {
+      width: 100%;
       padding: 8px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-      transition: background-color 0.2s;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-size: 14px;
     }
-    .spreadsheet-item:hover {
-      background-color: #f5f5f5;
+    select:focus {
+      outline: none;
+      border-color: #4285f4;
+    }
+    .select-button {
+      background-color: #4285f4;
+      margin-top: 10px;
+    }
+    .select-button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    .message {
+      color: #666;
+      font-size: 14px;
+      text-align: center;
+      margin: 10px 0;
     }
   </style>
 </head>
 <body>
   <button id="authButton">Sign in with Google</button>
-  <div id="spreadsheetList">
-    <p>Spreadsheets will appear here.</p>
+  <div id="spreadsheetSelector" class="spreadsheet-selector">
+    <select id="spreadsheetSelect">
+      <option value="">Select a spreadsheet...</option>
+    </select>
+    <button id="selectButton" class="select-button" disabled>Open Spreadsheet</button>
+    <p id="message" class="message"></p>
   </div>
   <script src="popup.js"></script>
 </body>

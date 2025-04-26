@@ -1,7 +1,12 @@
 // Check auth state when popup opens
 document.addEventListener('DOMContentLoaded', checkAuthState);
 const authButton = document.getElementById('authButton');
+const selectButton = document.getElementById('selectButton');
+const spreadsheetSelect = document.getElementById('spreadsheetSelect');
+
 authButton.addEventListener('click', authenticate);
+selectButton.addEventListener('click', handleSpreadsheetSelection);
+spreadsheetSelect.addEventListener('change', handleSpreadsheetChange);
 
 async function checkAuthState() {
   try {
@@ -42,6 +47,9 @@ function showAuthenticatedState(userInfo) {
   authButton.textContent = `Hi, ${userInfo.given_name || userInfo.name}`;
   authButton.disabled = true;
   authButton.classList.add('authenticated');
+  
+  // Show the spreadsheet selector
+  document.getElementById('spreadsheetSelector').classList.add('visible');
 }
 
 function showUnauthenticatedState() {
@@ -49,6 +57,14 @@ function showUnauthenticatedState() {
   authButton.textContent = 'Sign in with Google';
   authButton.disabled = false;
   authButton.classList.remove('authenticated');
+  
+  // Hide the spreadsheet selector
+  document.getElementById('spreadsheetSelector').classList.remove('visible');
+  
+  // Reset the select
+  const select = document.getElementById('spreadsheetSelect');
+  select.innerHTML = '<option value="">Select a spreadsheet...</option>';
+  document.getElementById('selectButton').disabled = true;
 }
 
 async function authenticate() {
@@ -94,8 +110,30 @@ async function listSpreadsheets(token) {
     displaySpreadsheets(data.files || []);
   } catch (error) {
     console.error('Error fetching spreadsheets:', error);
-    const container = document.getElementById('spreadsheetList');
-    container.innerHTML = `<p>Error: ${error.message}</p>`;
+    showMessage(`Error: ${error.message}`, true);
+  }
+}
+
+function showMessage(text, isError = false) {
+  const message = document.getElementById('message');
+  message.textContent = text;
+  message.style.color = isError ? '#dc3545' : '#666';
+}
+
+function handleSpreadsheetChange(event) {
+  const selectButton = document.getElementById('selectButton');
+  selectButton.disabled = !event.target.value;
+}
+
+function handleSpreadsheetSelection() {
+  const select = document.getElementById('spreadsheetSelect');
+  const selectedOption = select.options[select.selectedIndex];
+  
+  if (selectedOption && selectedOption.value) {
+    selectSpreadsheet({
+      id: selectedOption.value,
+      name: selectedOption.text
+    });
   }
 }
 
@@ -141,24 +179,22 @@ async function writeToSpreadsheet(token, spreadsheetId, range, values) {
 }
 
 function displaySpreadsheets(spreadsheets) {
-  const container = document.getElementById('spreadsheetList');
-  container.innerHTML = '';
-
+  const select = document.getElementById('spreadsheetSelect');
+  select.innerHTML = '<option value="">Select a spreadsheet...</option>';
+  
   if (!spreadsheets || spreadsheets.length === 0) {
-    const noSheets = document.createElement('p');
-    noSheets.textContent = 'No spreadsheets found.';
-    container.appendChild(noSheets);
+    showMessage('No spreadsheets found.');
     return;
   }
 
   spreadsheets.forEach(sheet => {
-    const div = document.createElement('div');
-    div.className = 'spreadsheet-item';
-    div.textContent = sheet.name;
-    div.dataset.id = sheet.id;
-    div.addEventListener('click', () => selectSpreadsheet(sheet));
-    container.appendChild(div);
+    const option = document.createElement('option');
+    option.value = sheet.id;
+    option.textContent = sheet.name;
+    select.appendChild(option);
   });
+  
+  showMessage('Please select a spreadsheet.');
 }
 
 function selectSpreadsheet(sheet) {
