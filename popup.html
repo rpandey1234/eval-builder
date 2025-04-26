@@ -124,6 +124,19 @@
     .reject-button:hover:not(:disabled) {
       background-color: #d33828;
     }
+    .submit-button {
+      background-color: #4285f4;
+    }
+    .submit-button:hover:not(:disabled) {
+      background-color: #357abd;
+    }
+    .response-display {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 100px;
+    }
   </style>
 </head>
 <body>
@@ -144,8 +157,12 @@
       <textarea id="promptInput" placeholder="Enter the prompt..."></textarea>
     </div>
     <div class="input-group">
-      <label for="responseInput">Response</label>
-      <textarea id="responseInput" placeholder="Enter the response..."></textarea>
+      <label for="inputBox">Input</label>
+      <textarea id="inputBox" placeholder="Enter the input..."></textarea>
+    </div>
+    <div class="input-group">
+      <button id="submitToClaude" class="submit-button">Submit to Claude</button>
+      <div id="claudeResponse" class="response-display"></div>
     </div>
     <div class="button-group">
       <button id="approveButton" class="approve-button">Approve</button>

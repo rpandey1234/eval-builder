@@ -6,11 +6,15 @@ const approveButton = document.getElementById('approveButton');
 const rejectButton = document.getElementById('rejectButton');
 const promptInput = document.getElementById('promptInput');
 const responseInput = document.getElementById('responseInput');
+const inputBox = document.getElementById('inputBox');
+const submitToClaude = document.getElementById('submitToClaude');
+const claudeResponse = document.getElementById('claudeResponse');
 
 authButton.addEventListener('click', authenticate);
 spreadsheetSelect.addEventListener('change', handleSpreadsheetChange);
 approveButton.addEventListener('click', () => handleEvaluation(true));
 rejectButton.addEventListener('click', () => handleEvaluation(false));
+submitToClaude.addEventListener('click', handleClaudeSubmit);
 
 let currentSpreadsheetId = null;
 
@@ -150,6 +154,45 @@ function handleSpreadsheetChange(event) {
         name: selectedName
       }
     });
+
+    // Pre-populate prompt and input from the first data row
+    (async () => {
+      console.log('Attempting to pre-populate fields from spreadsheet:', selectedValue);
+      let auth;
+      try {
+        auth = await chrome.identity.getAuthToken({ interactive: false });
+        if (!auth || !auth.token) {
+          console.log('No auth token received for reading spreadsheet (non-interactive). Trying interactive...');
+          auth = await chrome.identity.getAuthToken({ interactive: true });
+        }
+        if (auth && auth.token) {
+          const sheetData = await readSpreadsheet(auth.token, selectedValue);
+          console.log('Fetched sheet data:', sheetData);
+          // Find the first sheet with data
+          const sheet = sheetData.sheets && sheetData.sheets[0];
+          if (sheet && sheet.data && sheet.data[0] && sheet.data[0].rowData && sheet.data[0].rowData.length > 1) {
+            // rowData[0] is header, rowData[1] is first data row
+            const firstRow = sheet.data[0].rowData[1];
+            console.log('First data row:', firstRow);
+            if (firstRow && firstRow.values) {
+              // Prompt is col 1 (B), Input is col 2 (C)
+              promptInput.value = firstRow.values[1]?.formattedValue || '';
+              inputBox.value = firstRow.values[2]?.formattedValue || '';
+              console.log('Pre-populated prompt:', promptInput.value);
+              console.log('Pre-populated input:', inputBox.value);
+            } else {
+              console.log('No values found in first data row.');
+            }
+          } else {
+            console.log('No data rows found in sheet.');
+          }
+        } else {
+          console.log('No auth token received for reading spreadsheet (even after interactive).');
+        }
+      } catch (err) {
+        console.error('Error pre-populating fields:', err);
+      }
+    })();
   } else {
     document.getElementById('evalForm').classList.remove('visible');
     showMessage('Please select a spreadsheet.');
@@ -157,9 +200,54 @@ function handleSpreadsheetChange(event) {
   }
 }
 
+async function handleClaudeSubmit() {
+  if (!promptInput.value || !inputBox.value) {
+    showMessage('Please fill in both prompt and input.', true);
+    return;
+  }
+
+  try {
+    submitToClaude.disabled = true;
+    claudeResponse.textContent = 'Waiting for Claude...';
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': 'YOUR_ANTHROPIC_API_KEY', // You'll need to replace this with your actual API key
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-opus-20240229',
+        max_tokens: 1000,
+        messages: [
+          {
+            role: 'user',
+            content: `${promptInput.value}\n\nInput: ${inputBox.value}`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    claudeResponse.textContent = data.content[0].text;
+    showMessage('Response received from Claude!');
+  } catch (error) {
+    console.error('Error calling Claude API:', error);
+    showMessage(`Error: ${error.message}`, true);
+    claudeResponse.textContent = 'Error getting response from Claude.';
+  } finally {
+    submitToClaude.disabled = false;
+  }
+}
+
 async function handleEvaluation(isApproved) {
-  if (!currentSpreadsheetId || !promptInput.value || !responseInput.value) {
-    showMessage('Please fill in both prompt and response.', true);
+  if (!currentSpreadsheetId || !promptInput.value || !inputBox.value || !claudeResponse.textContent) {
+    showMessage('Please fill in prompt, input, and get a response from Claude first.', true);
     return;
   }
 
@@ -168,7 +256,8 @@ async function handleEvaluation(isApproved) {
     const values = [[
       new Date().toISOString(),
       promptInput.value,
-      responseInput.value,
+      inputBox.value,
+      claudeResponse.textContent,
       isApproved ? 'APPROVED' : 'REJECTED'
     ]];
     
@@ -176,7 +265,8 @@ async function handleEvaluation(isApproved) {
     
     // Clear the form
     promptInput.value = '';
-    responseInput.value = '';
+    inputBox.value = '';
+    claudeResponse.textContent = '';
     showMessage(isApproved ? 'Evaluation approved and saved!' : 'Evaluation rejected and saved.');
   } catch (error) {
     console.error('Error saving evaluation:', error);
@@ -249,6 +339,8 @@ async function displaySpreadsheets(spreadsheets) {
       currentSpreadsheetId = selectedSpreadsheet.id;
       document.getElementById('evalForm').classList.add('visible');
       showMessage('Enter prompt and response, then approve or reject.');
+      // Explicitly call handleSpreadsheetChange to trigger pre-population
+      handleSpreadsheetChange({ target: select });
     } else {
       showMessage('Please select a spreadsheet.');
     }
