@@ -15,6 +15,7 @@
       "https://www.googleapis.com/auth/userinfo.profile"
     ]
   },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3HOrXiFbQQkMa99wyvLXs1hky6WAD1m8W9sz1yU1QeJ7A99mJ42TQfsGMpcgTKb/r1k2kKvCLZOq0zEsR7HtqRsJ5/VOAwYtRQ3NyMvdAiOtKFo0563qnahIgK+/S4CW++f5nwzTmVxEQalZWgXOCvXMfrnHYxM9ys3VP1viSvWvF0WGyXd99VUPAOZPcSOf17AmMJN2JDXatdA3wsT6ZZJC1RQf2HFsm02W1RNePUItj4tWYXvy8Ohf6lR8hoRqrNgx37p32HrGPMwCBR5aU/DemyjQjxeaDuSKJlJ+hGNgJp0phLGF6WpAEiaaPvQMAGR+vIfTFRW7OeGGEr9NwwIDAQAB",
   "action": {
     "default_popup": "popup.html"
   },

@@ -27,7 +27,8 @@
       cursor: default;
     }
     button:disabled {
-      opacity: 1;
+      opacity: 0.7;
+      cursor: not-allowed;
     }
     .spreadsheet-selector {
       margin-top: 15px;
@@ -52,16 +53,60 @@
       background-color: #4285f4;
       margin-top: 10px;
     }
-    .select-button:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
     .message {
       color: #666;
       font-size: 14px;
       text-align: center;
       margin: 10px 0;
+    }
+    .eval-form {
+      margin-top: 15px;
+      display: none;
+    }
+    .eval-form.visible {
+      display: block;
+    }
+    .input-group {
+      margin-bottom: 10px;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #333;
+      font-weight: 500;
+    }
+    .input-group textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 60px;
+      box-sizing: border-box;
+    }
+    .input-group textarea:focus {
+      outline: none;
+      border-color: #4285f4;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+    .button-group button {
+      flex: 1;
+    }
+    .approve-button {
+      background-color: #34a853;
+    }
+    .approve-button:hover:not(:disabled) {
+      background-color: #2d9147;
+    }
+    .reject-button {
+      background-color: #ea4335;
+    }
+    .reject-button:hover:not(:disabled) {
+      background-color: #d33828;
     }
   </style>
 </head>
@@ -73,6 +118,20 @@
     </select>
     <button id="selectButton" class="select-button" disabled>Open Spreadsheet</button>
     <p id="message" class="message"></p>
+  </div>
+  <div id="evalForm" class="eval-form">
+    <div class="input-group">
+      <label for="promptInput">Prompt</label>
+      <textarea id="promptInput" placeholder="Enter the prompt..."></textarea>
+    </div>
+    <div class="input-group">
+      <label for="responseInput">Response</label>
+      <textarea id="responseInput" placeholder="Enter the response..."></textarea>
+    </div>
+    <div class="button-group">
+      <button id="approveButton" class="approve-button">Approve</button>
+      <button id="rejectButton" class="reject-button">Reject</button>
+    </div>
   </div>
   <script src="popup.js"></script>
 </body>

@@ -3,10 +3,18 @@ document.addEventListener('DOMContentLoaded', checkAuthState);
 const authButton = document.getElementById('authButton');
 const selectButton = document.getElementById('selectButton');
 const spreadsheetSelect = document.getElementById('spreadsheetSelect');
+const approveButton = document.getElementById('approveButton');
+const rejectButton = document.getElementById('rejectButton');
+const promptInput = document.getElementById('promptInput');
+const responseInput = document.getElementById('responseInput');
 
 authButton.addEventListener('click', authenticate);
 selectButton.addEventListener('click', handleSpreadsheetSelection);
 spreadsheetSelect.addEventListener('change', handleSpreadsheetChange);
+approveButton.addEventListener('click', () => handleEvaluation(true));
+rejectButton.addEventListener('click', () => handleEvaluation(false));
+
+let currentSpreadsheetId = null;
 
 async function checkAuthState() {
   try {
@@ -58,13 +66,19 @@ function showUnauthenticatedState() {
   authButton.disabled = false;
   authButton.classList.remove('authenticated');
   
-  // Hide the spreadsheet selector
+  // Hide the spreadsheet selector and eval form
   document.getElementById('spreadsheetSelector').classList.remove('visible');
+  document.getElementById('evalForm').classList.remove('visible');
   
   // Reset the select
   const select = document.getElementById('spreadsheetSelect');
   select.innerHTML = '<option value="">Select a spreadsheet...</option>';
   document.getElementById('selectButton').disabled = true;
+  
+  // Reset the form
+  promptInput.value = '';
+  responseInput.value = '';
+  currentSpreadsheetId = null;
 }
 
 async function authenticate() {
@@ -130,10 +144,36 @@ function handleSpreadsheetSelection() {
   const selectedOption = select.options[select.selectedIndex];
   
   if (selectedOption && selectedOption.value) {
-    selectSpreadsheet({
-      id: selectedOption.value,
-      name: selectedOption.text
-    });
+    currentSpreadsheetId = selectedOption.value;
+    document.getElementById('evalForm').classList.add('visible');
+    showMessage('Enter prompt and response, then approve or reject.');
+  }
+}
+
+async function handleEvaluation(isApproved) {
+  if (!currentSpreadsheetId || !promptInput.value || !responseInput.value) {
+    showMessage('Please fill in both prompt and response.', true);
+    return;
+  }
+
+  try {
+    const auth = await chrome.identity.getAuthToken({ interactive: false });
+    const values = [[
+      new Date().toISOString(),
+      promptInput.value,
+      responseInput.value,
+      isApproved ? 'APPROVED' : 'REJECTED'
+    ]];
+    
+    await appendToSpreadsheet(auth.token, currentSpreadsheetId, values);
+    
+    // Clear the form
+    promptInput.value = '';
+    responseInput.value = '';
+    showMessage(isApproved ? 'Evaluation approved and saved!' : 'Evaluation rejected and saved.');
+  } catch (error) {
+    console.error('Error saving evaluation:', error);
+    showMessage(`Error saving evaluation: ${error.message}`, true);
   }
 }
 
@@ -155,12 +195,12 @@ async function readSpreadsheet(token, spreadsheetId) {
   return await response.json();
 }
 
-// Helper function to write to spreadsheet using Sheets API
-async function writeToSpreadsheet(token, spreadsheetId, range, values) {
+// Helper function to append data to spreadsheet
+async function appendToSpreadsheet(token, spreadsheetId, values) {
   const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:D1:append?valueInputOption=USER_ENTERED`,
     {
-      method: 'PUT',
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -172,7 +212,7 @@ async function writeToSpreadsheet(token, spreadsheetId, range, values) {
   );
   
   if (!response.ok) {
-    throw new Error(`Failed to write to spreadsheet: ${response.statusText}`);
+    throw new Error(`Failed to append to spreadsheet: ${response.statusText}`);
   }
   
   return await response.json();
