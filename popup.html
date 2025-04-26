@@ -8,6 +8,20 @@
       padding: 10px;
       font-family: Arial, sans-serif;
     }
+    .title {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .title h1 {
+      font-size: 18px;
+      color: #202124;
+      margin: 0 0 5px 0;
+    }
+    .title p {
+      font-size: 14px;
+      color: #5f6368;
+      margin: 0;
+    }
     button {
       width: 100%;
       padding: 8px;
@@ -48,10 +62,6 @@
     select:focus {
       outline: none;
       border-color: #4285f4;
-    }
-    .select-button {
-      background-color: #4285f4;
-      margin-top: 10px;
     }
     .message {
       color: #666;
@@ -111,12 +121,15 @@
   </style>
 </head>
 <body>
+  <div class="title">
+    <h1>LLM Eval Builder</h1>
+    <p>Easy and quick LLM evals</p>
+  </div>
   <button id="authButton">Sign in with Google</button>
   <div id="spreadsheetSelector" class="spreadsheet-selector">
     <select id="spreadsheetSelect">
       <option value="">Select a spreadsheet...</option>
     </select>
-    <button id="selectButton" class="select-button" disabled>Open Spreadsheet</button>
     <p id="message" class="message"></p>
   </div>
   <div id="evalForm" class="eval-form">

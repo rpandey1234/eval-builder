@@ -1,7 +1,6 @@
 // Check auth state when popup opens
 document.addEventListener('DOMContentLoaded', checkAuthState);
 const authButton = document.getElementById('authButton');
-const selectButton = document.getElementById('selectButton');
 const spreadsheetSelect = document.getElementById('spreadsheetSelect');
 const approveButton = document.getElementById('approveButton');
 const rejectButton = document.getElementById('rejectButton');
@@ -9,7 +8,6 @@ const promptInput = document.getElementById('promptInput');
 const responseInput = document.getElementById('responseInput');
 
 authButton.addEventListener('click', authenticate);
-selectButton.addEventListener('click', handleSpreadsheetSelection);
 spreadsheetSelect.addEventListener('change', handleSpreadsheetChange);
 approveButton.addEventListener('click', () => handleEvaluation(true));
 rejectButton.addEventListener('click', () => handleEvaluation(false));
@@ -73,7 +71,6 @@ function showUnauthenticatedState() {
   // Reset the select
   const select = document.getElementById('spreadsheetSelect');
   select.innerHTML = '<option value="">Select a spreadsheet...</option>';
-  document.getElementById('selectButton').disabled = true;
   
   // Reset the form
   promptInput.value = '';
@@ -135,18 +132,15 @@ function showMessage(text, isError = false) {
 }
 
 function handleSpreadsheetChange(event) {
-  const selectButton = document.getElementById('selectButton');
-  selectButton.disabled = !event.target.value;
-}
-
-function handleSpreadsheetSelection() {
-  const select = document.getElementById('spreadsheetSelect');
-  const selectedOption = select.options[select.selectedIndex];
+  const selectedValue = event.target.value;
+  currentSpreadsheetId = selectedValue;
   
-  if (selectedOption && selectedOption.value) {
-    currentSpreadsheetId = selectedOption.value;
+  if (selectedValue) {
     document.getElementById('evalForm').classList.add('visible');
     showMessage('Enter prompt and response, then approve or reject.');
+  } else {
+    document.getElementById('evalForm').classList.remove('visible');
+    showMessage('Please select a spreadsheet.');
   }
 }
 
@@ -235,15 +229,4 @@ function displaySpreadsheets(spreadsheets) {
   });
   
   showMessage('Please select a spreadsheet.');
-}
-
-function selectSpreadsheet(sheet) {
-  chrome.storage.sync.set({ 
-    selectedSpreadsheet: {
-      id: sheet.id,
-      name: sheet.name
-    }
-  }, () => {
-    window.close();
-  });
 }
