@@ -76,6 +76,9 @@ function showUnauthenticatedState() {
   promptInput.value = '';
   responseInput.value = '';
   currentSpreadsheetId = null;
+  
+  // Clear stored spreadsheet
+  chrome.storage.sync.remove('selectedSpreadsheet');
 }
 
 async function authenticate() {
@@ -118,7 +121,7 @@ async function listSpreadsheets(token) {
 
     const data = await response.json();
     console.log('Fetched spreadsheets:', data);
-    displaySpreadsheets(data.files || []);
+    await displaySpreadsheets(data.files || []);
   } catch (error) {
     console.error('Error fetching spreadsheets:', error);
     showMessage(`Error: ${error.message}`, true);
@@ -133,14 +136,24 @@ function showMessage(text, isError = false) {
 
 function handleSpreadsheetChange(event) {
   const selectedValue = event.target.value;
+  const selectedName = event.target.options[event.target.selectedIndex].text;
   currentSpreadsheetId = selectedValue;
   
   if (selectedValue) {
     document.getElementById('evalForm').classList.add('visible');
     showMessage('Enter prompt and response, then approve or reject.');
+    
+    // Store the selection
+    chrome.storage.sync.set({
+      selectedSpreadsheet: {
+        id: selectedValue,
+        name: selectedName
+      }
+    });
   } else {
     document.getElementById('evalForm').classList.remove('visible');
     showMessage('Please select a spreadsheet.');
+    chrome.storage.sync.remove('selectedSpreadsheet');
   }
 }
 
@@ -212,7 +225,7 @@ async function appendToSpreadsheet(token, spreadsheetId, values) {
   return await response.json();
 }
 
-function displaySpreadsheets(spreadsheets) {
+async function displaySpreadsheets(spreadsheets) {
   const select = document.getElementById('spreadsheetSelect');
   select.innerHTML = '<option value="">Select a spreadsheet...</option>';
   
@@ -227,6 +240,20 @@ function displaySpreadsheets(spreadsheets) {
     option.textContent = sheet.name;
     select.appendChild(option);
   });
-  
-  showMessage('Please select a spreadsheet.');
+
+  // Restore previously selected spreadsheet
+  try {
+    const { selectedSpreadsheet } = await chrome.storage.sync.get('selectedSpreadsheet');
+    if (selectedSpreadsheet && selectedSpreadsheet.id) {
+      select.value = selectedSpreadsheet.id;
+      currentSpreadsheetId = selectedSpreadsheet.id;
+      document.getElementById('evalForm').classList.add('visible');
+      showMessage('Enter prompt and response, then approve or reject.');
+    } else {
+      showMessage('Please select a spreadsheet.');
+    }
+  } catch (error) {
+    console.error('Error restoring spreadsheet selection:', error);
+    showMessage('Please select a spreadsheet.');
+  }
 }
