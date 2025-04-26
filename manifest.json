@@ -11,7 +11,8 @@
     "client_id": "957884325877-ke99k5q40cef0h4vtl33mpcufglafhiq.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/spreadsheets",
-      "https://www.googleapis.com/auth/drive.readonly"
+      "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/userinfo.profile"
     ]
   },
   "action": {

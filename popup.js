@@ -1,4 +1,55 @@
-document.getElementById('authButton').addEventListener('click', authenticate);
+// Check auth state when popup opens
+document.addEventListener('DOMContentLoaded', checkAuthState);
+const authButton = document.getElementById('authButton');
+authButton.addEventListener('click', authenticate);
+
+async function checkAuthState() {
+  try {
+    const auth = await chrome.identity.getAuthToken({ 
+      interactive: false
+    });
+    
+    if (auth && auth.token) {
+      const userInfo = await getUserInfo(auth.token);
+      showAuthenticatedState(userInfo);
+      await listSpreadsheets(auth.token);
+    }
+  } catch (error) {
+    console.log('Not authenticated:', error);
+    showUnauthenticatedState();
+  }
+}
+
+async function getUserInfo(token) {
+  const response = await fetch(
+    'https://www.googleapis.com/oauth2/v2/userinfo',
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error('Failed to get user info');
+  }
+  
+  return await response.json();
+}
+
+function showAuthenticatedState(userInfo) {
+  const authButton = document.getElementById('authButton');
+  authButton.textContent = `Hi, ${userInfo.given_name || userInfo.name}`;
+  authButton.disabled = true;
+  authButton.classList.add('authenticated');
+}
+
+function showUnauthenticatedState() {
+  const authButton = document.getElementById('authButton');
+  authButton.textContent = 'Sign in with Google';
+  authButton.disabled = false;
+  authButton.classList.remove('authenticated');
+}
 
 async function authenticate() {
   console.log('Authenticating...');
@@ -8,9 +59,12 @@ async function authenticate() {
     });
     
     console.log('Auth result:', auth);
+    const userInfo = await getUserInfo(auth.token);
+    showAuthenticatedState(userInfo);
     await listSpreadsheets(auth.token);
   } catch (error) {
     console.error('Authentication error:', error);
+    showUnauthenticatedState();
   }
 }
 
