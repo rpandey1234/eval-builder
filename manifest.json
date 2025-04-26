@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "LLM Eval Builder",
+  "version": "1.0",
+  "description": "A basic Chrome extension that helps you create high quality evals.",
+  "permissions": [
+    "identity",
+    "storage"
+  ],
+  "oauth2": {
+    "client_id": "${NEW_CLIENT_ID}.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/spreadsheets"
+    ]
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
