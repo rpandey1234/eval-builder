@@ -249,7 +249,8 @@ async function handleClaudeSubmit() {
     const headers = {
       'Content-Type': 'application/json',
       'x-api-key': anthropicApiKey,
-      'anthropic-version': '2023-06-01'
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
     };
     console.log('Claude API request headers:', headers);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
