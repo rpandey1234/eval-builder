@@ -1,19 +1,14 @@
 document.getElementById('authButton').addEventListener('click', authenticate);
 
 async function authenticate() {
+  console.log('Authenticating...');
   try {
-    const result = await chrome.identity.getAuthToken({ 
+    const auth = await chrome.identity.getAuthToken({ 
       interactive: true
     });
     
-    console.log('Auth result:', result);
-    if (result && result.token) {
-      console.log('Got token:', result.token);
-      await listSpreadsheets(result.token);
-    } else {
-      console.log('Got raw token:', result);
-      await listSpreadsheets(result);
-    }
+    console.log('Auth result:', auth);
+    await listSpreadsheets(auth.token);
   } catch (error) {
     console.error('Authentication error:', error);
   }
@@ -22,6 +17,7 @@ async function authenticate() {
 async function listSpreadsheets(token) {
   try {
     console.log('Using token:', token);
+    // Use Drive API to list spreadsheets
     const response = await fetch(
       'https://www.googleapis.com/drive/v3/files?' +
       'q=mimeType=\'application/vnd.google-apps.spreadsheet\'' +
@@ -47,6 +43,47 @@ async function listSpreadsheets(token) {
     const container = document.getElementById('spreadsheetList');
     container.innerHTML = `<p>Error: ${error.message}</p>`;
   }
+}
+
+// Helper function to read spreadsheet data using Sheets API
+async function readSpreadsheet(token, spreadsheetId) {
+  const response = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?includeGridData=true`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Failed to read spreadsheet: ${response.statusText}`);
+  }
+  
+  return await response.json();
+}
+
+// Helper function to write to spreadsheet using Sheets API
+async function writeToSpreadsheet(token, spreadsheetId, range, values) {
+  const response = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`,
+    {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        values: values
+      })
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Failed to write to spreadsheet: ${response.statusText}`);
+  }
+  
+  return await response.json();
 }
 
 function displaySpreadsheets(spreadsheets) {
