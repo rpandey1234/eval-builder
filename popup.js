@@ -19,6 +19,7 @@ submitToClaude.addEventListener('click', handleClaudeSubmit);
 
 let currentSpreadsheetId = null;
 let anthropicApiKey = '';
+let lastClaudeMarkdown = '';
 
 async function checkAuthState() {
   try {
@@ -301,6 +302,7 @@ async function handleClaudeSubmit() {
 
     const data = await response.json();
     const markdown = data.content[0].text;
+    lastClaudeMarkdown = markdown;
     claudeResponse.innerHTML = window.marked ? window.marked.parse(markdown) : markdown;
     showMessage('Response received from Claude!');
     updateApproveRejectState();
@@ -328,7 +330,7 @@ async function handleEvaluation(isApproved) {
       new Date().toISOString(),
       promptInput.value,
       inputBox.value,
-      claudeResponse.textContent,
+      lastClaudeMarkdown,
       isApproved ? 'APPROVED' : 'REJECTED'
     ]];
     // Save to A1:E1 (5 columns)
