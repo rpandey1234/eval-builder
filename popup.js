@@ -191,24 +191,24 @@ function handleSpreadsheetChange(event) {
             }
           }
 
-          // Pre-populate prompt and input from the first data row
+          // Pre-populate prompt and input from the last non-empty data row
           console.log('Attempting to pre-populate fields from spreadsheet:', selectedValue);
           const sheetData = await readSpreadsheet(auth.token, selectedValue);
           console.log('Fetched sheet data:', sheetData);
-          // Find the first sheet with data
+          // Use the first sheet
           const sheet = sheetData.sheets && sheetData.sheets[0];
           if (sheet && sheet.data && sheet.data[0] && sheet.data[0].rowData && sheet.data[0].rowData.length > 1) {
-            // rowData[0] is header, rowData[1] is first data row
-            const firstRow = sheet.data[0].rowData[1];
-            console.log('First data row:', firstRow);
-            if (firstRow && firstRow.values) {
-              // Prompt is col 1 (B), Input is col 2 (C)
-              promptInput.value = firstRow.values[1]?.formattedValue || '';
-              inputBox.value = firstRow.values[2]?.formattedValue || '';
+            // Filter out empty rows
+            const dataRows = sheet.data[0].rowData.slice(1).filter(row => row && row.values && row.values.some(cell => cell && cell.formattedValue));
+            const lastRow = dataRows[dataRows.length - 1];
+            console.log('Last non-empty data row:', lastRow);
+            if (lastRow && lastRow.values) {
+              promptInput.value = lastRow.values[1]?.formattedValue || '';
+              inputBox.value = lastRow.values[2]?.formattedValue || '';
               console.log('Pre-populated prompt:', promptInput.value);
               console.log('Pre-populated input:', inputBox.value);
             } else {
-              console.log('No values found in first data row.');
+              console.log('No values found in last data row.');
             }
           } else {
             console.log('No data rows found in sheet.');
@@ -249,10 +249,12 @@ function updateApproveRejectState() {
 
 promptInput.addEventListener('input', () => {
   claudeResponse.textContent = '';
+  claudeResponse.innerHTML = '';
   updateApproveRejectState();
 });
 inputBox.addEventListener('input', () => {
   claudeResponse.textContent = '';
+  claudeResponse.innerHTML = '';
   updateApproveRejectState();
 });
 
@@ -298,13 +300,15 @@ async function handleClaudeSubmit() {
     }
 
     const data = await response.json();
-    claudeResponse.textContent = data.content[0].text;
+    const markdown = data.content[0].text;
+    claudeResponse.innerHTML = window.marked ? window.marked.parse(markdown) : markdown;
     showMessage('Response received from Claude!');
     updateApproveRejectState();
   } catch (error) {
     console.error('Error calling Claude API:', error);
     showMessage(`Error: ${error.message}`, true);
     claudeResponse.textContent = 'Error getting response from Claude.';
+    claudeResponse.innerHTML = '<span style="color:#dc3545">Error getting response from Claude.</span>';
     updateApproveRejectState();
   } finally {
     submitToClaude.disabled = false;
