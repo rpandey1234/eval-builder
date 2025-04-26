@@ -10,6 +10,8 @@ const inputBox = document.getElementById('inputBox');
 const submitToClaude = document.getElementById('submitToClaude');
 const claudeResponse = document.getElementById('claudeResponse');
 const userGreeting = document.getElementById('userGreeting');
+const evaluateButton = document.getElementById('evaluateButton');
+const approvedCountDisplay = document.getElementById('approvedCountDisplay');
 
 authButton.addEventListener('click', authenticate);
 spreadsheetSelect.addEventListener('change', handleSpreadsheetChange);
@@ -20,6 +22,7 @@ submitToClaude.addEventListener('click', handleClaudeSubmit);
 let currentSpreadsheetId = null;
 let anthropicApiKey = '';
 let lastClaudeMarkdown = '';
+let approvedRows = [];
 
 async function checkAuthState() {
   try {
@@ -213,6 +216,22 @@ function handleSpreadsheetChange(event) {
             }
           } else {
             console.log('No data rows found in sheet.');
+          }
+
+          // Count APPROVED rows in column E and store them
+          try {
+            if (sheet && sheet.data && sheet.data[0] && sheet.data[0].rowData && sheet.data[0].rowData.length > 1) {
+              // Get all data rows (skip header)
+              const dataRows = sheet.data[0].rowData.slice(1);
+              approvedRows = dataRows.filter(row => row && row.values && row.values[4]?.formattedValue === 'APPROVED');
+              approvedCountDisplay.textContent = `Approved rows: ${approvedRows.length}`;
+            } else {
+              approvedRows = [];
+              approvedCountDisplay.textContent = 'Approved rows: 0';
+            }
+          } catch (err) {
+            approvedRows = [];
+            approvedCountDisplay.textContent = 'Approved rows: 0';
           }
         } else {
           console.log('No auth token received for reading spreadsheet (even after interactive).');
@@ -427,4 +446,12 @@ async function displaySpreadsheets(spreadsheets) {
     console.error('Error restoring spreadsheet selection:', error);
     showMessage('Please select a spreadsheet.');
   }
+}
+
+// Add a placeholder click handler for the Evaluate button
+if (evaluateButton) {
+  evaluateButton.addEventListener('click', () => {
+    // Placeholder: will use approvedRows in the future
+    console.log('Evaluate button pressed. Approved rows:', approvedRows);
+  });
 }
