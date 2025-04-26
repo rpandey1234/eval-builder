@@ -232,6 +232,31 @@ function handleSpreadsheetChange(event) {
   }
 }
 
+function setApproveRejectEnabled(enabled) {
+  approveButton.disabled = !enabled;
+  rejectButton.disabled = !enabled;
+}
+
+// Initially disable approve/reject
+setApproveRejectEnabled(false);
+
+// Enable/disable approve/reject based on field values
+function updateApproveRejectState() {
+  const hasPrompt = !!promptInput.value.trim();
+  const hasInput = !!inputBox.value.trim();
+  const hasResponse = !!claudeResponse.textContent.trim();
+  setApproveRejectEnabled(hasPrompt && hasInput && hasResponse);
+}
+
+promptInput.addEventListener('input', () => {
+  claudeResponse.textContent = '';
+  updateApproveRejectState();
+});
+inputBox.addEventListener('input', () => {
+  claudeResponse.textContent = '';
+  updateApproveRejectState();
+});
+
 async function handleClaudeSubmit() {
   if (!promptInput.value || !inputBox.value) {
     showMessage('Please fill in both prompt and input.', true);
@@ -245,6 +270,7 @@ async function handleClaudeSubmit() {
   try {
     submitToClaude.disabled = true;
     claudeResponse.textContent = 'Waiting for Claude...';
+    updateApproveRejectState();
     
     const headers = {
       'Content-Type': 'application/json',
@@ -275,10 +301,12 @@ async function handleClaudeSubmit() {
     const data = await response.json();
     claudeResponse.textContent = data.content[0].text;
     showMessage('Response received from Claude!');
+    updateApproveRejectState();
   } catch (error) {
     console.error('Error calling Claude API:', error);
     showMessage(`Error: ${error.message}`, true);
     claudeResponse.textContent = 'Error getting response from Claude.';
+    updateApproveRejectState();
   } finally {
     submitToClaude.disabled = false;
   }
@@ -291,6 +319,7 @@ async function handleEvaluation(isApproved) {
   }
 
   try {
+    setApproveRejectEnabled(false);
     const auth = await chrome.identity.getAuthToken({ interactive: false });
     const values = [[
       new Date().toISOString(),
@@ -299,17 +328,25 @@ async function handleEvaluation(isApproved) {
       claudeResponse.textContent,
       isApproved ? 'APPROVED' : 'REJECTED'
     ]];
-    
-    await appendToSpreadsheet(auth.token, currentSpreadsheetId, values);
-    
-    // Clear the form
-    promptInput.value = '';
-    inputBox.value = '';
-    claudeResponse.textContent = '';
+    // Save to A1:E1 (5 columns)
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${currentSpreadsheetId}/values/Sheet1!A1:E1:append?valueInputOption=USER_ENTERED`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ values })
+      }
+    );
+    // Optionally clear fields or show a message
     showMessage(isApproved ? 'Evaluation approved and saved!' : 'Evaluation rejected and saved.');
+    setTimeout(() => { window.close(); }, 500); // Close extension popup after save
   } catch (error) {
     console.error('Error saving evaluation:', error);
     showMessage(`Error saving evaluation: ${error.message}`, true);
+    setApproveRejectEnabled(true);
   }
 }
 
