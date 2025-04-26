@@ -9,6 +9,7 @@ const responseInput = document.getElementById('responseInput');
 const inputBox = document.getElementById('inputBox');
 const submitToClaude = document.getElementById('submitToClaude');
 const claudeResponse = document.getElementById('claudeResponse');
+const userGreeting = document.getElementById('userGreeting');
 
 authButton.addEventListener('click', authenticate);
 spreadsheetSelect.addEventListener('change', handleSpreadsheetChange);
@@ -54,20 +55,22 @@ async function getUserInfo(token) {
 }
 
 function showAuthenticatedState(userInfo) {
-  const authButton = document.getElementById('authButton');
-  authButton.textContent = `Hi, ${userInfo.given_name || userInfo.name}`;
-  authButton.disabled = true;
-  authButton.classList.add('authenticated');
+  // Hide the auth button
+  authButton.classList.add('hidden');
+  
+  // Show greeting in the description
+  userGreeting.textContent = `Hi, ${userInfo.given_name || userInfo.name}. `;
   
   // Show the spreadsheet selector
   document.getElementById('spreadsheetSelector').classList.add('visible');
 }
 
 function showUnauthenticatedState() {
-  const authButton = document.getElementById('authButton');
-  authButton.textContent = 'Sign in with Google';
-  authButton.disabled = false;
-  authButton.classList.remove('authenticated');
+  // Show the auth button
+  authButton.classList.remove('hidden');
+  
+  // Clear the greeting
+  userGreeting.textContent = '';
   
   // Hide the spreadsheet selector and eval form
   document.getElementById('spreadsheetSelector').classList.remove('visible');
@@ -80,6 +83,8 @@ function showUnauthenticatedState() {
   // Reset the form
   promptInput.value = '';
   responseInput.value = '';
+  inputBox.value = '';
+  claudeResponse.textContent = '';
   currentSpreadsheetId = null;
   
   // Clear stored spreadsheet
@@ -146,8 +151,7 @@ function handleSpreadsheetChange(event) {
   
   if (selectedValue) {
     document.getElementById('evalForm').classList.add('visible');
-    showMessage('Enter prompt and response, then approve or reject.');
-    
+
     // Store the selection
     chrome.storage.sync.set({
       selectedSpreadsheet: {
@@ -178,11 +182,6 @@ function handleSpreadsheetChange(event) {
           if (apiKeySheetResp.ok) {
             const apiKeySheetData = await apiKeySheetResp.json();
             anthropicApiKey = (apiKeySheetData.values && apiKeySheetData.values[0] && apiKeySheetData.values[0][0]) || '';
-            // Display the full API key
-            const apiKeyDisplay = document.getElementById('apiKeyDisplay');
-            if (apiKeyDisplay) {
-              apiKeyDisplay.textContent = anthropicApiKey ? anthropicApiKey : '(No API key found)';
-            }
             console.log('Anthropic API key (full):', anthropicApiKey);
           } else {
             console.error('Failed to fetch API key from sheet.');
@@ -413,8 +412,6 @@ async function displaySpreadsheets(spreadsheets) {
     if (selectedSpreadsheet && selectedSpreadsheet.id) {
       select.value = selectedSpreadsheet.id;
       currentSpreadsheetId = selectedSpreadsheet.id;
-      document.getElementById('evalForm').classList.add('visible');
-      showMessage('Enter prompt and response, then approve or reject.');
       // Explicitly call handleSpreadsheetChange to trigger pre-population
       handleSpreadsheetChange({ target: select });
     } else {
