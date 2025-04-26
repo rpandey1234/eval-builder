@@ -246,15 +246,17 @@ async function handleClaudeSubmit() {
     submitToClaude.disabled = true;
     claudeResponse.textContent = 'Waiting for Claude...';
     
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-api-key': anthropicApiKey,
+      'anthropic-version': '2023-06-01'
+    };
+    console.log('Claude API request headers:', headers);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicApiKey,
-        'anthropic-version': '2023-06-01'
-      },
+      headers,
       body: JSON.stringify({
-        model: 'claude-3-opus-20240229',
+        model: 'claude-3-7-sonnet-20250219',
         max_tokens: 1000,
         messages: [
           {
