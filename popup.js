@@ -12,6 +12,9 @@ const claudeResponse = document.getElementById('claudeResponse');
 const userGreeting = document.getElementById('userGreeting');
 const evaluateButton = document.getElementById('evaluateButton');
 const approvedCountDisplay = document.getElementById('approvedCountDisplay');
+const evalHarness = document.getElementById('evalHarness');
+const promptPrimeDisplay = document.getElementById('promptPrimeDisplay');
+const evalResultsList = document.getElementById('evalResultsList');
 
 authButton.addEventListener('click', authenticate);
 spreadsheetSelect.addEventListener('change', handleSpreadsheetChange);
@@ -450,8 +453,66 @@ async function displaySpreadsheets(spreadsheets) {
 
 // Add a placeholder click handler for the Evaluate button
 if (evaluateButton) {
-  evaluateButton.addEventListener('click', () => {
-    // Placeholder: will use approvedRows in the future
-    console.log('Evaluate button pressed. Approved rows:', approvedRows);
+  evaluateButton.addEventListener('click', async () => {
+    // Hide main UI, show eval harness UI
+    document.getElementById('evalForm').style.display = 'none';
+    evaluateButton.style.display = 'none';
+    approvedCountDisplay.style.display = 'none';
+    evalHarness.style.display = 'block';
+
+    // Use the current prompt as prompt_prime
+    const promptPrime = promptInput.value;
+    promptPrimeDisplay.textContent = promptPrime;
+
+    // Clear previous results
+    evalResultsList.innerHTML = '';
+
+    // For each approved row, call Claude with (prompt_prime, input)
+    for (let i = 0; i < approvedRows.length; i++) {
+      const row = approvedRows[i];
+      const input = row.values[2]?.formattedValue || '';
+      // Add a placeholder list item
+      const li = document.createElement('li');
+      li.textContent = `Input: ${input} | Similarity: ...`;
+      evalResultsList.appendChild(li);
+
+      // Call Claude with (prompt_prime, input)
+      let similarity = '';
+      try {
+        if (anthropicApiKey && promptPrime && input) {
+          const headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': anthropicApiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          };
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              model: 'claude-3-7-sonnet-20250219',
+              max_tokens: 1000,
+              messages: [
+                {
+                  role: 'user',
+                  content: `${promptPrime}\n\nInput: ${input}`
+                }
+              ]
+            })
+          });
+          if (response.ok) {
+            // For now, use a dummy similarity value
+            similarity = '0.85';
+          } else {
+            similarity = 'Error';
+          }
+        } else {
+          similarity = 'Skipped';
+        }
+      } catch (err) {
+        similarity = 'Error';
+      }
+      li.textContent = `Input: ${input} | Similarity: ${similarity}`;
+    }
   });
 }
