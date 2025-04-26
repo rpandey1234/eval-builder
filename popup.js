@@ -24,8 +24,8 @@ async function listSpreadsheets(token) {
     console.log('Using token:', token);
     const response = await fetch(
       'https://www.googleapis.com/drive/v3/files?' +
-      'q=mimeType=\'application/vnd.google-apps.spreadsheet\' and trashed=false&' +
-      'fields=files(id,name)',
+      'q=mimeType=\'application/vnd.google-apps.spreadsheet\'' +
+      '&fields=files(id,name)',
       {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -41,7 +41,7 @@ async function listSpreadsheets(token) {
 
     const data = await response.json();
     console.log('Fetched spreadsheets:', data);
-    displaySpreadsheets(data.files);
+    displaySpreadsheets(data.files || []);
   } catch (error) {
     console.error('Error fetching spreadsheets:', error);
     const container = document.getElementById('spreadsheetList');
