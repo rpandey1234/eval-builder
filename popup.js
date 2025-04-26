@@ -17,6 +17,7 @@ rejectButton.addEventListener('click', () => handleEvaluation(false));
 submitToClaude.addEventListener('click', handleClaudeSubmit);
 
 let currentSpreadsheetId = null;
+let anthropicApiKey = '';
 
 async function checkAuthState() {
   try {
@@ -155,9 +156,8 @@ function handleSpreadsheetChange(event) {
       }
     });
 
-    // Pre-populate prompt and input from the first data row
+    // Read the API key from the 'API key' sheet, cell A1
     (async () => {
-      console.log('Attempting to pre-populate fields from spreadsheet:', selectedValue);
       let auth;
       try {
         auth = await chrome.identity.getAuthToken({ interactive: false });
@@ -166,6 +166,34 @@ function handleSpreadsheetChange(event) {
           auth = await chrome.identity.getAuthToken({ interactive: true });
         }
         if (auth && auth.token) {
+          // Read API key from the 'API key' sheet
+          const apiKeySheetResp = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${selectedValue}/values/API%20key!A1`,
+            {
+              headers: {
+                'Authorization': `Bearer ${auth.token}`
+              }
+            }
+          );
+          if (apiKeySheetResp.ok) {
+            const apiKeySheetData = await apiKeySheetResp.json();
+            anthropicApiKey = (apiKeySheetData.values && apiKeySheetData.values[0] && apiKeySheetData.values[0][0]) || '';
+            // Display the full API key
+            const apiKeyDisplay = document.getElementById('apiKeyDisplay');
+            if (apiKeyDisplay) {
+              apiKeyDisplay.textContent = anthropicApiKey ? anthropicApiKey : '(No API key found)';
+            }
+            console.log('Anthropic API key (full):', anthropicApiKey);
+          } else {
+            console.error('Failed to fetch API key from sheet.');
+            const apiKeyDisplay = document.getElementById('apiKeyDisplay');
+            if (apiKeyDisplay) {
+              apiKeyDisplay.textContent = '(No API key found)';
+            }
+          }
+
+          // Pre-populate prompt and input from the first data row
+          console.log('Attempting to pre-populate fields from spreadsheet:', selectedValue);
           const sheetData = await readSpreadsheet(auth.token, selectedValue);
           console.log('Fetched sheet data:', sheetData);
           // Find the first sheet with data
@@ -190,19 +218,27 @@ function handleSpreadsheetChange(event) {
           console.log('No auth token received for reading spreadsheet (even after interactive).');
         }
       } catch (err) {
-        console.error('Error pre-populating fields:', err);
+        console.error('Error pre-populating fields or fetching API key:', err);
       }
     })();
   } else {
     document.getElementById('evalForm').classList.remove('visible');
     showMessage('Please select a spreadsheet.');
     chrome.storage.sync.remove('selectedSpreadsheet');
+    const apiKeyDisplay = document.getElementById('apiKeyDisplay');
+    if (apiKeyDisplay) {
+      apiKeyDisplay.textContent = '';
+    }
   }
 }
 
 async function handleClaudeSubmit() {
   if (!promptInput.value || !inputBox.value) {
     showMessage('Please fill in both prompt and input.', true);
+    return;
+  }
+  if (!anthropicApiKey) {
+    showMessage('No Anthropic API key loaded.', true);
     return;
   }
 
@@ -214,7 +250,7 @@ async function handleClaudeSubmit() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': 'YOUR_ANTHROPIC_API_KEY', // You'll need to replace this with your actual API key
+        'x-api-key': anthropicApiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
