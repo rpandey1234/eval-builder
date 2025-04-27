@@ -22,6 +22,7 @@ const startHarnessButton = document.getElementById('startHarnessButton');
 const tabCollect = document.getElementById('tabCollect');
 const tabEvaluate = document.getElementById('tabEvaluate');
 const collectTabContent = document.getElementById('collectTabContent');
+const promptPrimeInput = document.getElementById('promptPrimeInput');
 
 authButton.addEventListener('click', authenticate);
 spreadsheetSelect.addEventListener('change', handleSpreadsheetChange);
@@ -473,10 +474,12 @@ function showEvaluateTab() {
   // Reset Start button and threshold input
   similarityThresholdInput.disabled = false;
   startHarnessButton.disabled = false;
-  // Clear previous results and prompt under test
+  // Clear previous results and set prompt under test
   evalResultsTbody.innerHTML = '';
   evalAggregate.textContent = '';
-  promptPrimeDisplay.textContent = promptInput.value;
+  promptPrimeInput.value = promptInput.value;
+  approvedCountDisplay.style.display = 'block';
+  approvedCountDisplay.textContent = `Approved rows: ${approvedRows.length}`;
 }
 if (tabCollect) tabCollect.addEventListener('click', showCollectTab);
 if (tabEvaluate) tabEvaluate.addEventListener('click', showEvaluateTab);
@@ -484,9 +487,8 @@ if (tabEvaluate) tabEvaluate.addEventListener('click', showEvaluateTab);
 showCollectTab();
 
 async function runHarnessTests() {
-  // Use the current prompt as prompt under test
-  const promptPrime = promptInput.value;
-  promptPrimeDisplay.textContent = promptPrime;
+  // Use the value from the editable promptPrimeInput
+  const promptPrime = promptPrimeInput.value;
   // Get threshold
   let threshold = parseFloat(similarityThresholdInput.value) || 0.85;
   // Store results for aggregate
