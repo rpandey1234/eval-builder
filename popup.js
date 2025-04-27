@@ -19,6 +19,9 @@ const evalResultsTbody = document.getElementById('evalResultsTbody');
 const similarityThresholdInput = document.getElementById('similarityThreshold');
 const evalAggregate = document.getElementById('evalAggregate');
 const startHarnessButton = document.getElementById('startHarnessButton');
+const tabCollect = document.getElementById('tabCollect');
+const tabEvaluate = document.getElementById('tabEvaluate');
+const collectTabContent = document.getElementById('collectTabContent');
 
 authButton.addEventListener('click', authenticate);
 spreadsheetSelect.addEventListener('change', handleSpreadsheetChange);
@@ -455,24 +458,30 @@ async function displaySpreadsheets(spreadsheets) {
   }
 }
 
-// Add a placeholder click handler for the Evaluate button
-if (evaluateButton) {
-  evaluateButton.addEventListener('click', async () => {
-    // Hide main UI, show eval harness UI
-    document.getElementById('evalForm').style.display = 'none';
-    evaluateButton.style.display = 'none';
-    approvedCountDisplay.style.display = 'none';
-    evalHarness.style.display = 'block';
-
-    // Use the current prompt as prompt under test
-    const promptPrime = promptInput.value;
-    promptPrimeDisplay.textContent = promptPrime;
-
-    // Clear previous results
-    evalResultsTbody.innerHTML = '';
-    evalAggregate.textContent = '';
-  });
+// Tab switching logic
+function showCollectTab() {
+  tabCollect.classList.add('active');
+  tabEvaluate.classList.remove('active');
+  collectTabContent.style.display = '';
+  evalHarness.style.display = 'none';
 }
+function showEvaluateTab() {
+  tabCollect.classList.remove('active');
+  tabEvaluate.classList.add('active');
+  collectTabContent.style.display = 'none';
+  evalHarness.style.display = 'block';
+  // Reset Start button and threshold input
+  similarityThresholdInput.disabled = false;
+  startHarnessButton.disabled = false;
+  // Clear previous results and prompt under test
+  evalResultsTbody.innerHTML = '';
+  evalAggregate.textContent = '';
+  promptPrimeDisplay.textContent = promptInput.value;
+}
+if (tabCollect) tabCollect.addEventListener('click', showCollectTab);
+if (tabEvaluate) tabEvaluate.addEventListener('click', showEvaluateTab);
+// Show Collect Data tab by default
+showCollectTab();
 
 async function runHarnessTests() {
   // Use the current prompt as prompt under test

@@ -144,6 +144,29 @@
     #authButton.hidden {
       display: none;
     }
+    .tab {
+      padding: 8px;
+      border: none;
+      border-bottom: 3px solid transparent;
+      background: #ececec;
+      font-weight: 500;
+      cursor: pointer;
+      color: #444;
+      transition: background 0.2s, color 0.2s, border-bottom 0.2s;
+    }
+    .tab.active {
+      background: #fff;
+      color: #222;
+      border-bottom: 3px solid #6c47ff;
+      z-index: 1;
+    }
+    #tabBar {
+      display: flex;
+      margin-bottom: 10px;
+      border-radius: 8px 8px 0 0;
+      overflow: hidden;
+      background: #ececec;
+    }
   </style>
 </head>
 <body>
@@ -151,33 +174,37 @@
     <h1>LLM Eval Builder 🍐</h1>
     <p><span id="userGreeting"></span>Use this for easy and quick LLM evals, shared with your team.</p>
   </div>
-  <button id="authButton">Sign in with Google</button>
-  <div id="spreadsheetSelector" class="spreadsheet-selector">
-    <select id="spreadsheetSelect">
-      <option value="">Select a spreadsheet...</option>
-    </select>
-    <p id="message" class="message"></p>
+  <div id="tabBar">
+    <button id="tabCollect" class="tab active">Collect Data</button>
+    <button id="tabEvaluate" class="tab">Evaluate</button>
   </div>
-  <div style="margin-bottom: 10px;">
-    <button id="evaluateButton" style="width:100%;background:#6c47ff;color:#fff;">Evaluate</button>
+  <div id="collectTabContent">
+    <div id="apiKeyDisplay" style="font-size:12px;color:#888;margin-bottom:5px;"></div>
+    <button id="authButton">Sign in with Google</button>
+    <div id="spreadsheetSelector" class="spreadsheet-selector">
+      <select id="spreadsheetSelect">
+        <option value="">Select a spreadsheet...</option>
+      </select>
+      <p id="message" class="message"></p>
+    </div>
     <div id="approvedCountDisplay" style="font-size:13px;color:#333;margin-top:4px;"></div>
-  </div>
-  <div id="evalForm" class="eval-form">
-    <div class="input-group">
-      <label for="promptInput">Prompt</label>
-      <textarea id="promptInput" placeholder="Enter the prompt..."></textarea>
-    </div>
-    <div class="input-group">
-      <label for="inputBox">Input</label>
-      <textarea id="inputBox" placeholder="Enter the input..."></textarea>
-    </div>
-    <div class="input-group">
-      <button id="submitToClaude" class="submit-button">Submit to Claude</button>
-      <div id="claudeResponse" class="response-display"></div>
-    </div>
-    <div class="button-group">
-      <button id="approveButton" class="approve-button">Approve</button>
-      <button id="rejectButton" class="reject-button">Reject</button>
+    <div id="evalForm" class="eval-form">
+      <div class="input-group">
+        <label for="promptInput">Prompt</label>
+        <textarea id="promptInput" placeholder="Enter the prompt..."></textarea>
+      </div>
+      <div class="input-group">
+        <label for="inputBox">Input</label>
+        <textarea id="inputBox" placeholder="Enter the input..."></textarea>
+      </div>
+      <div class="input-group">
+        <button id="submitToClaude" class="submit-button">Submit to Claude</button>
+        <div id="claudeResponse" class="response-display"></div>
+      </div>
+      <div class="button-group">
+        <button id="approveButton" class="approve-button">Approve</button>
+        <button id="rejectButton" class="reject-button">Reject</button>
+      </div>
     </div>
   </div>
   <div id="evalHarness" style="display:none; margin-top:20px;">
