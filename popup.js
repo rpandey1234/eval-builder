@@ -14,7 +14,11 @@ const evaluateButton = document.getElementById('evaluateButton');
 const approvedCountDisplay = document.getElementById('approvedCountDisplay');
 const evalHarness = document.getElementById('evalHarness');
 const promptPrimeDisplay = document.getElementById('promptPrimeDisplay');
-const evalResultsList = document.getElementById('evalResultsList');
+const evalResultsTable = document.getElementById('evalResultsTable');
+const evalResultsTbody = document.getElementById('evalResultsTbody');
+const similarityThresholdInput = document.getElementById('similarityThreshold');
+const evalAggregate = document.getElementById('evalAggregate');
+const startHarnessButton = document.getElementById('startHarnessButton');
 
 authButton.addEventListener('click', authenticate);
 spreadsheetSelect.addEventListener('change', handleSpreadsheetChange);
@@ -460,59 +464,126 @@ if (evaluateButton) {
     approvedCountDisplay.style.display = 'none';
     evalHarness.style.display = 'block';
 
-    // Use the current prompt as prompt_prime
+    // Use the current prompt as prompt under test
     const promptPrime = promptInput.value;
     promptPrimeDisplay.textContent = promptPrime;
 
     // Clear previous results
-    evalResultsList.innerHTML = '';
-
-    // For each approved row, call Claude with (prompt_prime, input)
-    for (let i = 0; i < approvedRows.length; i++) {
-      const row = approvedRows[i];
-      const input = row.values[2]?.formattedValue || '';
-      // Add a placeholder list item
-      const li = document.createElement('li');
-      li.textContent = `Input: ${input} | Similarity: ...`;
-      evalResultsList.appendChild(li);
-
-      // Call Claude with (prompt_prime, input)
-      let similarity = '';
-      try {
-        if (anthropicApiKey && promptPrime && input) {
-          const headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': anthropicApiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true'
-          };
-          const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              model: 'claude-3-7-sonnet-20250219',
-              max_tokens: 1000,
-              messages: [
-                {
-                  role: 'user',
-                  content: `${promptPrime}\n\nInput: ${input}`
-                }
-              ]
-            })
-          });
-          if (response.ok) {
-            // For now, use a dummy similarity value
-            similarity = '0.85';
-          } else {
-            similarity = 'Error';
-          }
-        } else {
-          similarity = 'Skipped';
-        }
-      } catch (err) {
-        similarity = 'Error';
-      }
-      li.textContent = `Input: ${input} | Similarity: ${similarity}`;
-    }
+    evalResultsTbody.innerHTML = '';
+    evalAggregate.textContent = '';
   });
+}
+
+async function runHarnessTests() {
+  // Use the current prompt as prompt under test
+  const promptPrime = promptInput.value;
+  // Get threshold
+  let threshold = parseFloat(similarityThresholdInput.value) || 0.85;
+  // Store results for aggregate
+  let passCount = 0;
+  let totalCount = approvedRows.length;
+  let similarityResults = [];
+  // Clear previous results
+  evalResultsTbody.innerHTML = '';
+  evalAggregate.textContent = '';
+  // For each approved row, call Claude with (promptPrime, input)
+  for (let i = 0; i < approvedRows.length; i++) {
+    const row = approvedRows[i];
+    const input = row.values[2]?.formattedValue || '';
+    // Add a placeholder table row
+    const tr = document.createElement('tr');
+    const tdInput = document.createElement('td');
+    const tdSimilarity = document.createElement('td');
+    const tdPassFail = document.createElement('td');
+    const tdResponse = document.createElement('td');
+    tdInput.textContent = input;
+    tdSimilarity.textContent = '...';
+    tdPassFail.textContent = '';
+    tdResponse.textContent = '';
+    tr.appendChild(tdInput);
+    tr.appendChild(tdSimilarity);
+    tr.appendChild(tdPassFail);
+    tr.appendChild(tdResponse);
+    evalResultsTbody.appendChild(tr);
+    // Call Claude with (promptPrime, input)
+    let similarity = '';
+    let responseText = '';
+    try {
+      if (anthropicApiKey && promptPrime && input) {
+        const headers = {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicApiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        };
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: 'claude-3-7-sonnet-20250219',
+            max_tokens: 1000,
+            messages: [
+              {
+                role: 'user',
+                content: `${promptPrime}\n\nInput: ${input}`
+              }
+            ]
+          })
+        });
+        if (response.ok) {
+          // For now, use a dummy similarity value
+          similarity = '0.85';
+          // Get the response text
+          const data = await response.json();
+          responseText = data.content && data.content[0] && data.content[0].text ? data.content[0].text : '';
+        } else {
+          similarity = 'Error';
+        }
+      } else {
+        similarity = 'Skipped';
+      }
+    } catch (err) {
+      similarity = 'Error';
+    }
+    tdSimilarity.textContent = similarity;
+    let passFail = '';
+    if (!isNaN(Number(similarity))) {
+      passFail = Number(similarity) >= threshold ? 'Pass' : 'Fail';
+      tdPassFail.textContent = passFail;
+      tdPassFail.style.color = Number(similarity) >= threshold ? '#34a853' : '#ea4335';
+      if (passFail === 'Pass') passCount++;
+      tdResponse.textContent = passFail === 'Fail' ? responseText : '';
+    } else {
+      tdPassFail.textContent = similarity;
+      tdPassFail.style.color = '#666';
+      tdResponse.textContent = '';
+    }
+    similarityResults.push({input, similarity, passFail, responseText});
+  }
+  evalAggregate.textContent = `Passed ${passCount}/${totalCount}`;
+  // Update table and aggregate if threshold changes
+  similarityThresholdInput.addEventListener('input', () => {
+    let newThreshold = parseFloat(similarityThresholdInput.value) || 0.85;
+    let newPassCount = 0;
+    for (let i = 0; i < similarityResults.length; i++) {
+      const row = evalResultsTbody.children[i];
+      const sim = Number(similarityResults[i].similarity);
+      if (!isNaN(sim)) {
+        const pass = sim >= newThreshold;
+        row.children[2].textContent = pass ? 'Pass' : 'Fail';
+        row.children[2].style.color = pass ? '#34a853' : '#ea4335';
+        if (pass) newPassCount++;
+        row.children[3].textContent = pass ? '' : similarityResults[i].responseText;
+      } else {
+        row.children[2].textContent = similarityResults[i].similarity;
+        row.children[2].style.color = '#666';
+        row.children[3].textContent = '';
+      }
+    }
+    evalAggregate.textContent = `Passed ${newPassCount}/${totalCount}`;
+  }, { once: true });
+}
+
+if (startHarnessButton) {
+  startHarnessButton.addEventListener('click', runHarnessTests);
 }
