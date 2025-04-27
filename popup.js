@@ -632,6 +632,7 @@ async function runHarnessTests() {
   if (startHarnessButton) {
     startHarnessButton.addEventListener('click', () => {
       similarityThresholdInput.disabled = true;
+      startHarnessButton.disabled = true;
       runHarnessTests();
     });
   }
@@ -641,6 +642,7 @@ async function runHarnessTests() {
 if (startHarnessButton) {
   startHarnessButton.addEventListener('click', () => {
     similarityThresholdInput.disabled = true;
+    startHarnessButton.disabled = true;
     runHarnessTests();
   });
 }
