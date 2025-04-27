@@ -477,6 +477,7 @@ if (evaluateButton) {
 async function runHarnessTests() {
   // Use the current prompt as prompt under test
   const promptPrime = promptInput.value;
+  promptPrimeDisplay.textContent = promptPrime;
   // Get threshold
   let threshold = parseFloat(similarityThresholdInput.value) || 0.85;
   // Store results for aggregate
@@ -490,24 +491,29 @@ async function runHarnessTests() {
   for (let i = 0; i < approvedRows.length; i++) {
     const row = approvedRows[i];
     const input = row.values[2]?.formattedValue || '';
+    const prevResponse = row.values[3]?.formattedValue || '';
     // Add a placeholder table row
     const tr = document.createElement('tr');
     const tdInput = document.createElement('td');
     const tdSimilarity = document.createElement('td');
     const tdPassFail = document.createElement('td');
     const tdResponse = document.createElement('td');
+    const tdPrevResponse = document.createElement('td');
     tdInput.textContent = input;
     tdSimilarity.textContent = '...';
     tdPassFail.textContent = '';
     tdResponse.textContent = '';
+    tdPrevResponse.textContent = '';
     tr.appendChild(tdInput);
     tr.appendChild(tdSimilarity);
     tr.appendChild(tdPassFail);
     tr.appendChild(tdResponse);
+    tr.appendChild(tdPrevResponse);
     evalResultsTbody.appendChild(tr);
-    // Call Claude with (promptPrime, input)
+    // Call Claude with (promptPrime, input) to get new response
     let similarity = '';
     let responseText = '';
+    let similarityRaw = '';
     try {
       if (anthropicApiKey && promptPrime && input) {
         const headers = {
@@ -516,7 +522,9 @@ async function runHarnessTests() {
           'anthropic-version': '2023-06-01',
           'anthropic-dangerous-direct-browser-access': 'true'
         };
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        // 1. Get new response from Claude
+        let newResponse = '';
+        const response1 = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -530,15 +538,49 @@ async function runHarnessTests() {
             ]
           })
         });
-        if (response.ok) {
-          // For now, use a dummy similarity value
-          similarity = '0.85';
-          // Get the response text
-          const data = await response.json();
-          responseText = data.content && data.content[0] && data.content[0].text ? data.content[0].text : '';
+        if (response1.ok) {
+          const data1 = await response1.json();
+          newResponse = data1.content && data1.content[0] && data1.content[0].text ? data1.content[0].text : '';
+        }
+        // 2. Ask Claude for similarity
+        let similarityPrompt = `Given the following two responses, please provide a JSON object containing a 'similarityScore'. The 'similarityScore' should be an integer between 0 and 100. Example JSON: {{ "similarityScore": 92 }}\n\nPrevious response:\n${prevResponse}\n\nNew response:\n${newResponse}`;
+        const response2 = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: 'claude-3-7-sonnet-20250219',
+            max_tokens: 100,
+            messages: [
+              {
+                role: 'user',
+                content: similarityPrompt
+              }
+            ]
+          })
+        });
+        if (response2.ok) {
+          const data2 = await response2.json();
+          similarityRaw = data2.content && data2.content[0] && data2.content[0].text ? data2.content[0].text : '';
+          // Try to parse similarity as float
+          try {
+            const match = similarityRaw.match(/\{[^}]*\}/);
+            if (match) {
+              const json = JSON.parse(match[0]);
+              if (typeof json.similarityScore === 'number') {
+                similarity = (json.similarityScore / 100).toFixed(2);
+              } else {
+                similarity = 'ParseError';
+              }
+            } else {
+              similarity = 'ParseError';
+            }
+          } catch (e) {
+            similarity = 'ParseError';
+          }
         } else {
           similarity = 'Error';
         }
+        responseText = newResponse;
       } else {
         similarity = 'Skipped';
       }
@@ -553,12 +595,14 @@ async function runHarnessTests() {
       tdPassFail.style.color = Number(similarity) >= threshold ? '#34a853' : '#ea4335';
       if (passFail === 'Pass') passCount++;
       tdResponse.textContent = passFail === 'Fail' ? responseText : '';
+      tdPrevResponse.textContent = passFail === 'Fail' ? prevResponse : '';
     } else {
       tdPassFail.textContent = similarity;
       tdPassFail.style.color = '#666';
-      tdResponse.textContent = '';
+      tdResponse.textContent = similarityRaw;
+      tdPrevResponse.textContent = prevResponse;
     }
-    similarityResults.push({input, similarity, passFail, responseText});
+    similarityResults.push({input, similarity, passFail, responseText, similarityRaw, prevResponse});
   }
   evalAggregate.textContent = `Passed ${passCount}/${totalCount}`;
   // Update table and aggregate if threshold changes
@@ -574,16 +618,29 @@ async function runHarnessTests() {
         row.children[2].style.color = pass ? '#34a853' : '#ea4335';
         if (pass) newPassCount++;
         row.children[3].textContent = pass ? '' : similarityResults[i].responseText;
+        row.children[4].textContent = pass ? '' : similarityResults[i].prevResponse;
       } else {
         row.children[2].textContent = similarityResults[i].similarity;
         row.children[2].style.color = '#666';
-        row.children[3].textContent = '';
+        row.children[3].textContent = similarityResults[i].similarityRaw;
+        row.children[4].textContent = similarityResults[i].prevResponse;
       }
     }
     evalAggregate.textContent = `Passed ${newPassCount}/${totalCount}`;
   }, { once: true });
+  
+  if (startHarnessButton) {
+    startHarnessButton.addEventListener('click', () => {
+      similarityThresholdInput.disabled = true;
+      runHarnessTests();
+    });
+  }
 }
 
+// Move this block to the top level, outside of runHarnessTests
 if (startHarnessButton) {
-  startHarnessButton.addEventListener('click', runHarnessTests);
+  startHarnessButton.addEventListener('click', () => {
+    similarityThresholdInput.disabled = true;
+    runHarnessTests();
+  });
 }
