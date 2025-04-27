@@ -614,31 +614,9 @@ async function runHarnessTests() {
       tdPrevResponse.textContent = prevResponse;
     }
     similarityResults.push({input, similarity, passFail, responseText, similarityRaw, prevResponse});
+    evalAggregate.textContent = `Passed ${passCount}/${totalCount}`;
   }
-  evalAggregate.textContent = `Passed ${passCount}/${totalCount}`;
-  // Update table and aggregate if threshold changes
-  similarityThresholdInput.addEventListener('input', () => {
-    let newThreshold = parseFloat(similarityThresholdInput.value) || 0.85;
-    let newPassCount = 0;
-    for (let i = 0; i < similarityResults.length; i++) {
-      const row = evalResultsTbody.children[i];
-      const sim = Number(similarityResults[i].similarity);
-      if (!isNaN(sim)) {
-        const pass = sim >= newThreshold;
-        row.children[2].textContent = pass ? 'Pass' : 'Fail';
-        row.children[2].style.color = pass ? '#34a853' : '#ea4335';
-        if (pass) newPassCount++;
-        row.children[3].textContent = pass ? '' : similarityResults[i].responseText;
-        row.children[4].textContent = pass ? '' : similarityResults[i].prevResponse;
-      } else {
-        row.children[2].textContent = similarityResults[i].similarity;
-        row.children[2].style.color = '#666';
-        row.children[3].textContent = similarityResults[i].similarityRaw;
-        row.children[4].textContent = similarityResults[i].prevResponse;
-      }
-    }
-    evalAggregate.textContent = `Passed ${newPassCount}/${totalCount}`;
-  }, { once: true });
+  
   
   if (startHarnessButton) {
     startHarnessButton.addEventListener('click', () => {
