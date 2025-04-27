@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "LLM Eval Builder",
+  "name": "Rara: No-code LLM Evals",
   "version": "1.0",
   "description": "Easy and quick LLM evals, shared with your team",
   "icons": {
